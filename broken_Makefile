@@ -1,0 +1,27 @@
+C_SOURCES = $(wildcard *.c)
+HEADERS = $(wildcard *.h)
+
+OBJ = ${C_SOURCES:/c=.0}
+
+all: os-image
+
+run: all
+	qemu-system-i386 -fda os-image -boot a -no-fd-bootchk
+
+os-image: boot.bin kernel.bin
+	cat $^ > os-image
+
+kernel.bin: kernel_entry.o kernel.o ${OBJ}
+	ld -m elf_i386 -s -o $@ -Ttext 0x1000 $^ --oformat binary
+
+%.o: %.c ${HEADERS}
+	gcc -m32 -ffreestanding -c $< -o $@
+
+%.o: %.asm
+	nasm $< -f elf -o $@
+
+%.bin: %.asm
+	nasm $< -f elf -o $@
+
+clean:
+	rm *.bin *.o
